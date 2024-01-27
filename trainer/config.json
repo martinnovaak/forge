@@ -1,0 +1,11 @@
+{
+  "data_parser": "./dataparser.dll",
+  "data_root": "./data",
+  "train_id": "nnue",
+  "learning_rate": 0.001,
+  "epochs": 10,
+  "batch_size": 16384,
+  "wdl": 0.5,
+  "scale": 400,
+  "hidden_layer_size": 16
+}
