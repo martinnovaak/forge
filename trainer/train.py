@@ -1,8 +1,9 @@
-import json
 from time import time
 
 import torch
 from batchloader import BatchLoader
+
+from quantize import quantize
 
 
 def print_epoch_stats(epoch, running_loss, iterations, fens, start_time, current_time):
@@ -10,22 +11,6 @@ def print_epoch_stats(epoch, running_loss, iterations, fens, start_time, current
     message = ("epoch {:<2} | time: {:.2f} s | epoch loss: {:.4f} | speed: {:.2f} pos/s"
                .format(epoch, epoch_time, running_loss.item() / iterations, fens / epoch_time))
     print(message)
-
-
-def save_model_and_params(model, epoch):
-    model_path = f"network/nnue_{epoch}"
-    json_path = f"network/nnue_{epoch}.json"
-
-    torch.save(model.state_dict(), model_path)
-
-    param_map = {
-        name: param.detach().cpu().numpy().tolist()
-        for name, param in model.named_parameters()
-    }
-
-    with open(json_path, "w") as json_file:
-        json.dump(param_map, json_file)
-
 
 def train(
         model: torch.nn.Module,
@@ -52,7 +37,8 @@ def train(
             epoch_start_time = current_time
             iterations = 0
             fens = 0
-            save_model_and_params(model, epoch)
+            
+            quantize(model, f"network/nnue_{epoch}_scaled.bin")
 
         optimizer.zero_grad()
         prediction = model(batch)
