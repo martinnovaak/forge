@@ -57,13 +57,12 @@ impl Iterator for PositionIterator {
         }
 
         let square = self.board.occupancy.trailing_zeros() as usize;
-        let shifts = [1, 16];
-        let piece = ((self.board.pieces[self.index / 2] / shifts[self.index % 2]) & 0b1111) as usize;
+        let piece = (self.board.pieces[self.index / 2] as usize * [64, 4][self.index % 2]) & 0b1111000000;
 
         self.board.occupancy &= self.board.occupancy - 1;
         self.index += 1;
 
-        let stm_feature = piece * 64 + square;
+        let stm_feature = piece + square;
 
         Some((stm_feature as i16, MIRROR[stm_feature]))
     }
