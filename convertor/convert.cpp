@@ -17,63 +17,46 @@ enum Piece : std::uint8_t {
     BlackPawn, BlackKnight, BlackBishop, BlackRook, BlackQueen, BlackKing
 };
 
-Piece get_piece(Color color, char fen_char) {
-    if (color == White) {
-        switch (fen_char) {
-        case 'P':
-            return WhitePawn;
-        case 'R':
-            return WhiteRook;
-        case 'N':
-            return WhiteKnight;
-        case 'B':
-            return WhiteBishop;
-        case 'Q':
-            return WhiteQueen;
-        case 'K':
-            return WhiteKing;
-        case 'p':
-            return BlackPawn;
-        case 'r':
-            return BlackRook;
-        case 'n':
-            return BlackKnight;
-        case 'b':
-            return BlackBishop;
-        case 'q':
-            return BlackQueen;
-        case 'k':
-            return BlackKing;
-        }
+Piece get_white_piece(char fen_char) 
+{
+    switch (fen_char) {
+    case 'P': return WhitePawn;
+    case 'R': return WhiteRook;
+    case 'N': return WhiteKnight;
+    case 'B': return WhiteBishop;
+    case 'Q': return WhiteQueen;
+    case 'K': return WhiteKing;
+    case 'p': return BlackPawn;
+    case 'r': return BlackRook;
+    case 'n': return BlackKnight;
+    case 'b': return BlackBishop;
+    case 'q': return BlackQueen;
+    case 'k': return BlackKing;
+    default:  throw std::runtime_error("Wrong piece char: " + std::string(1, fen_char));
     }
-    else {
-        switch (fen_char) {
-        case 'p':
-            return WhitePawn;
-        case 'r':
-            return WhiteRook;
-        case 'n':
-            return WhiteKnight;
-        case 'b':
-            return WhiteBishop;
-        case 'q':
-            return WhiteQueen;
-        case 'k':
-            return WhiteKing;
-        case 'P':
-            return BlackPawn;
-        case 'R':
-            return BlackRook;
-        case 'N':
-            return BlackKnight;
-        case 'B':
-            return BlackBishop;
-        case 'Q':
-            return BlackQueen;
-        case 'K':
-            return BlackKing;
-        }
+}
+
+Piece get_black_piece(char fen_char) {
+    switch (fen_char) {
+    case 'p': return WhitePawn;
+    case 'r': return WhiteRook;
+    case 'n': return WhiteKnight;
+    case 'b': return WhiteBishop;
+    case 'q': return WhiteQueen;
+    case 'k': return WhiteKing;
+    case 'P': return BlackPawn;
+    case 'R': return BlackRook;
+    case 'N': return BlackKnight;
+    case 'B': return BlackBishop;
+    case 'Q': return BlackQueen;
+    case 'K': return BlackKing;
+    default:  throw std::runtime_error("Wrong piece char: " + std::string(1, fen_char));
     }
+}
+
+Piece get_piece(Color color, char fen_char)
+{
+    return (color == White) ? get_white_piece(fen_char) : get_black_piece(fen_char);
 }
 
 struct Position {
@@ -98,7 +81,12 @@ std::string swap_fen_ranks(const std::string& fen, Color side) {
         std::getline(iss, ranks[index], '/');
     }
 
-    return std::accumulate(ranks.begin(), ranks.end(), std::string{});
+    std::string result;
+    for (const auto& rank : ranks) {
+        result += rank;
+    }
+
+    return result;
 }
 
 static Position from_legacy(const std::string& raw_fen) {
@@ -121,8 +109,10 @@ static Position from_legacy(const std::string& raw_fen) {
     int square = 0, index = 0;
     int shift[2] = { 1, 16 };
 
-    for (char fen_char : board_str) {
-        if (std::isdigit(fen_char)) {
+    for (char fen_char : board_str) 
+    {
+        if (std::isdigit(fen_char)) 
+        {
             square += fen_char - '0';
         }
         else 
@@ -144,8 +134,12 @@ static Position from_legacy(const std::string& raw_fen) {
         }
     }
 
-    if (!score_str.empty()) {
-        pos.score = (side == Black) ? -std::stoi(score_str) : std::stoi(score_str);
+    if (!score_str.empty()) 
+    {
+        pos.score = std::stoi(score_str);
+        if (side == Black) {
+            pos.score = -pos.score;
+        }
     }
 
     if (result_str == "1.0" || result_str == "1") 
@@ -169,24 +163,31 @@ static Position from_legacy(const std::string& raw_fen) {
 }
 
 int main(int argc, char* argv[]) {
-    if (argc < 3) {
+    if (argc < 3) 
+    {
         std::cerr << "Usage: " << argv[0] << " <input_file> <output_file>\n";
         return 1;
     }
 
     std::ifstream input_file(argv[1]);
-    if (!input_file) {
+    if (!input_file) 
+    {
         std::cerr << "Error opening input file\n";
         return 1;
     }
 
     std::ofstream output_file(argv[2], std::ios::binary);
-    if (!output_file) {
+    if (!output_file) 
+    {
         std::cerr << "Error opening output file\n";
         return 1;
     }
 
-    std::uint64_t max_position = (argc >= 4) ? std::stoull(argv[3]) : std::numeric_limits<std::uint64_t>::max();
+    std::uint64_t max_position = std::numeric_limits<std::uint64_t>::max();
+    if (argc >= 4) 
+    {
+        max_position = std::stoull(argv[3]);
+    }
 
     std::string line;
     const int chunk_size = 16384;
@@ -194,10 +195,11 @@ int main(int argc, char* argv[]) {
     int total_positions = 0;
     const int print_interval = 1'000'000; 
 
-    std::array<Position, chunk_size> data;
+    std::vector<Position> data;
     std::vector<std::uint64_t> results(3, 0); // Wins, Draws, Losses
 
     auto start_time = std::chrono::high_resolution_clock::now();
+    auto interval_start_time = std::chrono::high_resolution_clock::now();
 
     while (std::getline(input_file, line)) 
     {
@@ -208,21 +210,26 @@ int main(int argc, char* argv[]) {
 
         Position pos = from_legacy(line);
         results[pos.result] += 1;
-        data[lines_read] = pos;
+        data.emplace_back(pos);
 
         lines_read++;
+
         total_positions++;
 
         if (lines_read == chunk_size)
         {
             output_file.write(reinterpret_cast<const char*>(data.data()), chunk_size * sizeof(Position));
 
+            data.clear();
             lines_read = 0;
+        }
 
-            if (total_positions % print_interval == 0) 
-            {
-                std::cout << "Processed " << total_positions << " positions\n";
-            }
+        if (total_positions % print_interval == 0)
+        {
+            auto interval_end_time = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(interval_end_time - interval_start_time).count();
+            std::cout << "Processed " << total_positions << " positions in " << duration << " milliseconds\n";
+            interval_start_time = std::chrono::high_resolution_clock::now();
         }
 
         if (total_positions >= max_position)
@@ -235,7 +242,6 @@ int main(int argc, char* argv[]) {
     std::chrono::duration<double> total_time = end_time - start_time;
 
     std::cout << "Loaded [" << argv[1] << "]\n";
-    std::cout << "Parsed to Position\n";
     std::cout << "Summary: " << total_positions << " Positions in " << total_time.count() << " seconds\n";
     std::cout << "Wins: " << static_cast<int>(results[2]) << ", Draws: " << static_cast<int>(results[1]) << ", Losses: " << static_cast<int>(results[0]) << '\n';
     std::cout << "Written to [" << argv[2] << "]\n";
