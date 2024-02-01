@@ -38,9 +38,9 @@ impl FileReader {
         match positions_result {
             Ok(positions) => {
                 for annotated in positions.iter() {
-                    for (stm_feature, nstm_feature) in annotated.into_iter() {
+                    annotated.process_features(|stm_feature, nstm_feature| {
                         batch.add_feature_sparse(stm_feature, nstm_feature);
-                    }
+                    });
                     batch.add_target(annotated.get_score(), annotated.get_result());
                 }
                 batch.get_capacity() == batch.get_len()

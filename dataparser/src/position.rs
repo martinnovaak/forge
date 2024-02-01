@@ -33,37 +33,24 @@ impl Position {
     pub fn get_result(&self) -> f32 {
         self.result as f32 / 2.0
     }
-}
 
-impl IntoIterator for Position {
-    type Item = (i16, i16);
-    type IntoIter = PositionIterator;
+    pub fn process_features<F>(&self, mut f: F)
+        where
+            F: FnMut(i16, i16),
+    {
+        let mut occupancy = self.occupancy;
+        let mut index = 0;
 
-    fn into_iter(self) -> PositionIterator {
-        PositionIterator { board: self, index: 0 }
-    }
-}
+        while occupancy != 0 {
+            let square = occupancy.trailing_zeros() as usize;
+            let piece = (self.pieces[index / 2] as usize * [64, 4][index % 2]) & 0b1111000000;
 
-pub struct PositionIterator {
-    board: Position,
-    index: usize,
-}
+            occupancy &= occupancy - 1;
+            index += 1;
 
-impl Iterator for PositionIterator {
-    type Item = (i16, i16);
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.board.occupancy == 0 {
-            return None;
+            let stm_feature = piece + square;
+
+            f(stm_feature as i16, MIRROR[stm_feature]);
         }
-
-        let square = self.board.occupancy.trailing_zeros() as usize;
-        let piece = (self.board.pieces[self.index / 2] as usize * [64, 4][self.index % 2]) & 0b1111000000;
-
-        self.board.occupancy &= self.board.occupancy - 1;
-        self.index += 1;
-
-        let stm_feature = piece + square;
-
-        Some((stm_feature as i16, MIRROR[stm_feature]))
     }
 }
