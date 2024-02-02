@@ -25,17 +25,17 @@ impl Position {
     {
         let mut occupancy = self.occupancy;
         let mut pieces = self.pieces;
-        const PIECE_MIRROR: [i16; 12] = [384, 448, 512, 576, 640, 704, 0, 64, 128, 192, 256, 320];
+        const PIECE_VALUES: [i16; 14] = [ 0, 64, 128, 192, 256, 320, 0, 0, 384, 448, 512, 576, 640, 704, ];
 
         while occupancy != 0 {
             let square = occupancy.trailing_zeros() as i16;
-            let piece = (pieces & 0b1111) as i16;
+            let colored_piece = (pieces & 0b1111) as i16;
 
             occupancy &= occupancy - 1;
             pieces >>= 4;
 
-            let stm_feature = piece * 64 + square;
-            let nstm_feature = PIECE_MIRROR[piece as usize] + square ^ 56;
+            let stm_feature = PIECE_VALUES[colored_piece as usize] + square;
+            let nstm_feature = PIECE_VALUES[(colored_piece ^ 8) as usize] + (square ^ 56);
 
             features(stm_feature, nstm_feature);
         }
