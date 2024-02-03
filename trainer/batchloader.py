@@ -30,25 +30,17 @@ class Batch:
 class BatchLoader:
     def __init__(self, lib_path: str, files: list[bytes], batch_size: int, scale: float, wdl: float) -> None:
         self.parse_lib = None
-        if not files:
-            raise ValueError("The files list cannot be empty.")
-
-        try:
-            self.parse_lib = ctypes.CDLL(lib_path)
-        except OSError as e:
-            raise Exception(f"Failed to load the library: {e}")
+        if not files: raise ValueError("The files list cannot be empty.")
+        try: self.parse_lib = ctypes.CDLL(lib_path)
+        except OSError as e: raise Exception(f"Failed to load the library: {e}")
         self.load_parse_lib()
 
-        self.files = files
-        self.file_index = 0
+        self.files, self.file_index = files, 0
         self.batch = ctypes.c_void_p(self.parse_lib.batch_new(ctypes.c_uint32(batch_size), ctypes.c_float(scale), ctypes.c_float(wdl)))
-
-        if self.batch.value is None:
-            raise Exception("Failed to create batch")
+        if self.batch.value is None: raise Exception("Failed to create batch")
 
         self.current_reader = ctypes.c_void_p(self.parse_lib.file_reader_new(ctypes.create_string_buffer(files[0])))
-        if self.current_reader.value is None:
-            raise Exception("Failed to create file reader")
+        if self.current_reader.value is None: raise Exception("Failed to create file reader")
 
     def next_batch(self, device: torch.device) -> tuple[bool, Batch]:
         new_epoch = False

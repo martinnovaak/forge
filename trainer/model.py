@@ -24,22 +24,3 @@ class PerspectiveNetwork(torch.nn.Module):
     def clamp_weights(self):
         self.feature_transformer.weight.data.clamp_(-2.0, 2.0)
         self.output_layer.weight.data.clamp_(-2.0, 2.0)
-
-
-# 768 -> N -> 1
-class StmPerspectiveNetwork(torch.nn.Module):
-    def __init__(self, feature_output_size: int):
-        super().__init__()
-        self.feature_transformer = torch.nn.Linear(768, feature_output_size)
-        self.output_layer = torch.nn.Linear(feature_output_size, 1)
-
-    def forward(self, batch: Batch):
-        stm_perspective = self.feature_transformer(batch.stm_sparse.to_dense())
-
-        hidden_features = torch.clamp(stm_perspective, 0, 1)
-
-        return torch.sigmoid(self.output_layer(hidden_features))
-
-    def clamp_weights(self):
-        self.feature_transformer.weight.data.clamp_(-2.0, 2.0)
-        self.output_layer.weight.data.clamp_(-2.0, 2.0)
