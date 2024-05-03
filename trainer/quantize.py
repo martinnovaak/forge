@@ -2,7 +2,7 @@ import torch
 import struct
 import numpy as np
 
-QA = 255
+QA = 403
 QB = 64
 QAB = QA * QB
 

@@ -32,5 +32,5 @@ class PerspectiveNetwork(torch.nn.Module):
         return torch.sigmoid(self.output_layer(hidden_features))
 
     def clamp_weights(self):
-        self.feature_transformer.weight.data.clamp_(-2.0, 2.0)
-        self.output_layer.weight.data.clamp_(-2.0, 2.0)
+        self.feature_transformer.weight.data.clamp_(-1.27, 1.27)
+        self.output_layer.weight.data.clamp_(-1.27, 1.27)
