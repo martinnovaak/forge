@@ -25,6 +25,7 @@ def main():
     epochs = config.get("epochs")
     batch_size = config.get("batch_size", 16384)
     wdl = config.get("wdl", 0.5)
+    lr_drop_steps = config.get("lr_drop_steps", 10)
     scale = config.get("scale")
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -38,7 +39,7 @@ def main():
 
     start_time = time()
 
-    train(model, optimizer, dataloader, epochs, device)
+    train(model, optimizer, dataloader, epochs, lr_drop_steps, device)
 
     end_time = time()
     elapsed_time = end_time - start_time
