@@ -34,7 +34,7 @@ def main():
 
     dataloader = BatchLoader(data_parser_path, paths, batch_size, scale, wdl)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-2)
 
     start_time = time()
 
