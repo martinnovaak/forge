@@ -8,5 +8,6 @@
   "wdl": 0.5,
   "lr_drop_steps" : 4,
   "scale": 400,
-  "hidden_layer_size": 16
+  "hidden_layer_size": 16,
+  "resume_training": false
 }

@@ -27,6 +27,7 @@ def main():
     wdl = config.get("wdl", 0.5)
     lr_drop_steps = config.get("lr_drop_steps", 10)
     scale = config.get("scale")
+    resume_training = config.get("resume_training", False)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = PerspectiveNetwork(config["hidden_layer_size"]).to(device)
@@ -39,7 +40,7 @@ def main():
 
     start_time = time()
 
-    train(model, optimizer, dataloader, epochs, lr_drop_steps, device)
+    train(model, optimizer, dataloader, epochs, lr_drop_steps, device, resume_training)
 
     end_time = time()
     elapsed_time = end_time - start_time
