@@ -57,6 +57,8 @@ def train(model: torch.nn.Module, optimizer: torch.optim.Optimizer, dataloader: 
             iterations = 0
             fens = 0
 
+            model.eval("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", device)
+
             quantize(model, f"network/nnue_{epoch}_scaled.bin")
 
         optimizer.zero_grad()
