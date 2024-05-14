@@ -7,6 +7,7 @@ import torch
 from batchloader import BatchLoader
 from model import PerspectiveNetwork
 from train import train
+from quantize import load_quantized_net
 
 
 def main():
@@ -31,6 +32,8 @@ def main():
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = PerspectiveNetwork(config["hidden_layer_size"]).to(device)
+    #model = load_quantized_net("nnue.bin", config["hidden_layer_size"], 403, 64).to(device)
+    model.eval("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", device)
 
     paths = [os.path.join(data_root.encode("utf-8"), file.encode("utf-8")) for file in os.listdir(data_root)]
 
