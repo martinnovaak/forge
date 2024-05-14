@@ -62,7 +62,7 @@ class PerspectiveNetwork(torch.nn.Module):
         hidden_features = torch.cat((stm_perspective, nstm_perspective))
         hidden_features = self.screlu(hidden_features)
 
-        print(int((torch.special.logit(torch.sigmoid(self.output_layer(hidden_features))) * 400).item()))
+        print(self.output_layer(hidden_features) * 400)
 
     def clamp_weights(self):
         self.feature_transformer.weight.data.clamp_(-1.27, 1.27)
