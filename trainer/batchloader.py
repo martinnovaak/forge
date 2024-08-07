@@ -20,7 +20,7 @@ result_types = {
 
 
 @dataclass
-class Batch:
+class SparseBatch:
     stm_sparse: torch.Tensor
     nstm_sparse: torch.Tensor
     target: torch.Tensor
@@ -42,7 +42,7 @@ class BatchLoader:
         self.current_reader = ctypes.c_void_p(self.parse_lib.file_reader_new(ctypes.create_string_buffer(files[0])))
         if self.current_reader.value is None: raise Exception("Failed to create file reader")
 
-    def next_batch(self, device: torch.device) -> tuple[bool, Batch]:
+    def next_batch(self, device: torch.device) -> tuple[bool, SparseBatch]:
         new_epoch = False
         while not self.parse_lib.try_to_load_batch(self.current_reader, self.batch):
             self.parse_lib.close_file(self.current_reader)
@@ -52,7 +52,7 @@ class BatchLoader:
             new_epoch = self.file_index == 0
         return new_epoch, self.to_pytorch_batch(device)
 
-    def to_pytorch_batch(self, device: torch.device) -> Batch:
+    def to_pytorch_batch(self, device: torch.device) -> SparseBatch:
         def to_pytorch(array: np.ndarray) -> torch.Tensor:
             return torch.from_numpy(array).to(device, non_blocking=True)
 
@@ -75,7 +75,7 @@ class BatchLoader:
 
         target = to_pytorch(np.ctypeslib.as_array(self.parse_lib.get_targets(self.batch), shape=(batch_len, 1)))
 
-        return Batch(stm_sparse, nstm_sparse, target, batch_len)
+        return SparseBatch(stm_sparse, nstm_sparse, target, batch_len)
 
     def load_parse_lib(self):
         for func_name, restype in result_types.items():

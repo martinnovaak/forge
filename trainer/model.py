@@ -1,6 +1,6 @@
 import torch
 
-from batchloader import Batch
+from batchloader import SparseBatch
 
 class SCReLU(torch.nn.Module):
     def __init__(self, inplace=False):
@@ -19,7 +19,7 @@ class PerspectiveNetwork(torch.nn.Module):
         self.output_layer = torch.nn.Linear(feature_output_size * 2, 1)
         self.screlu = SCReLU()
 
-    def forward(self, batch: Batch):
+    def forward(self, batch: SparseBatch):
         board_stm = batch.stm_sparse.to_dense()
         board_nstm = batch.nstm_sparse.to_dense()
 
