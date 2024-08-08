@@ -1,8 +1,7 @@
-from __future__ import annotations
+from cffi import FFI
 from dataclasses import dataclass
 import numpy as np
 import torch
-from cffi import FFI
 
 @dataclass
 class SparseBatch:
@@ -12,60 +11,47 @@ class SparseBatch:
     size: int
 
 class LibWrapper:
+    _cdef = """
+        typedef struct {
+            int16_t row_feature_buffer[16384 * 32];
+            int16_t stm_feature_buffer[16384 * 32];
+            int16_t nstm_feature_buffer[16384 * 32];
+            float target[16384];
+            size_t capacity;
+            size_t total_features;
+            size_t entries;
+            float scale;
+            float wdl;
+        } Batch;
+
+        typedef struct {} FileReader;
+
+        Batch* batch_new(uint32_t batch_size, float scale, float wdl);
+        void batch_drop(Batch* batch);
+        FileReader* file_reader_new(const char* path);
+        void close_file(FileReader* reader);
+        bool try_to_load_batch(FileReader* reader, Batch* batch);
+    """
+
     def __init__(self, lib_path: str) -> None:
         self.ffi = FFI()
+        self.ffi.cdef(self._cdef)
         self.lib = self.ffi.dlopen(lib_path)
-        self._define_functions()
 
-    def _define_functions(self) -> None:
-        self.ffi.cdef("""
-            void* batch_new(uint32_t batch_size, float scale, float wdl);
-            void batch_drop(void* batch);
-            uint32_t batch_get_len(void* batch);
-            int16_t* get_row_features(void* batch);
-            int16_t* get_stm_features(void* batch);
-            int16_t* get_nstm_features(void* batch);
-            uint32_t batch_get_total_features(void* batch);
-            float* get_targets(void* batch);
-            void* file_reader_new(const char* file_path);
-            void close_file(void* reader);
-            bool try_to_load_batch(void* reader, void* batch);
-        """)
-
-    def batch_new(self, batch_size: int, scale: float, wdl: float) -> ffi.CData:
+    def batch_new(self, batch_size: int, scale: float, wdl: float):
         return self.lib.batch_new(batch_size, scale, wdl)
 
-    def batch_drop(self, batch: ffi.CData) -> None:
+    def batch_drop(self, batch):
         self.lib.batch_drop(batch)
 
-    def batch_get_len(self, batch: ffi.CData) -> int:
-        return self.lib.batch_get_len(batch)
+    def file_reader_new(self, file_path: bytes):
+        return self.lib.file_reader_new(file_path)
 
-    def get_row_features(self, batch: ffi.CData) -> ffi.CData:
-        return self.lib.get_row_features(batch)
-
-    def get_stm_features(self, batch: ffi.CData) -> ffi.CData:
-        return self.lib.get_stm_features(batch)
-
-    def get_nstm_features(self, batch: ffi.CData) -> ffi.CData:
-        return self.lib.get_nstm_features(batch)
-
-    def batch_get_total_features(self, batch: ffi.CData) -> int:
-        return self.lib.batch_get_total_features(batch)
-
-    def get_targets(self, batch: ffi.CData) -> ffi.CData:
-        return self.lib.get_targets(batch)
-
-    def file_reader_new(self, file_path: bytes) -> ffi.CData:
-        file_path_buffer = self.ffi.new("char[]", file_path)
-        return self.lib.file_reader_new(file_path_buffer)
-
-    def close_file(self, reader: ffi.CData) -> None:
+    def close_file(self, reader):
         self.lib.close_file(reader)
 
-    def try_to_load_batch(self, reader: ffi.CData, batch: ffi.CData) -> bool:
+    def try_to_load_batch(self, reader, batch):
         return self.lib.try_to_load_batch(reader, batch)
-
 
 class BatchLoader:
     def __init__(self, lib_path: str, files: list[bytes], batch_size: int, scale: float, wdl: float) -> None:
@@ -86,21 +72,13 @@ class BatchLoader:
         return new_epoch, self.to_pytorch_batch(device)
 
     def to_pytorch_batch(self, device: torch.device) -> SparseBatch:
-        # Retrieve batch information
-        total_features = self.lib_wrapper.batch_get_total_features(self.batch)
-        batch_len = self.lib_wrapper.batch_get_len(self.batch)
+        total_features = self.batch.total_features
+        batch_len = self.batch.entries
 
-        # Get feature buffers
-        rows_buffer = self.lib_wrapper.get_row_features(self.batch)
-        stm_cols_buffer = self.lib_wrapper.get_stm_features(self.batch)
-        nstm_cols_buffer = self.lib_wrapper.get_nstm_features(self.batch)
+        rows = self._get_buffer_data(self.batch.row_feature_buffer, total_features, np.int16, device)
+        stm_cols = self._get_buffer_data(self.batch.stm_feature_buffer, total_features, np.int16, device)
+        nstm_cols = self._get_buffer_data(self.batch.nstm_feature_buffer, total_features, np.int16, device)
 
-        # Convert buffers to PyTorch tensors
-        rows = self._get_buffer_data(rows_buffer, total_features, np.int16, device)
-        stm_cols = self._get_buffer_data(stm_cols_buffer, total_features, np.int16, device)
-        nstm_cols = self._get_buffer_data(nstm_cols_buffer, total_features, np.int16, device)
-
-        # Create sparse tensors for STM and NSTM features
         values = torch.ones(total_features, device=device, dtype=torch.float32)
         stm_indices = torch.stack([rows, stm_cols], dim=0)
         nstm_indices = torch.stack([rows, nstm_cols], dim=0)
@@ -108,16 +86,14 @@ class BatchLoader:
         stm_sparse = torch.sparse_coo_tensor(stm_indices, values, (batch_len, 768))
         nstm_sparse = torch.sparse_coo_tensor(nstm_indices, values, (batch_len, 768))
 
-        # Get and process target buffer
-        targets_buffer = self.lib_wrapper.get_targets(self.batch)
-        target = self._get_buffer_data(targets_buffer, batch_len, np.float32, device, reshape=True)
+        targets = self._get_buffer_data(self.batch.target, batch_len, np.float32, device, reshape=True)
 
-        return SparseBatch(stm_sparse, nstm_sparse, target, batch_len)
+        return SparseBatch(stm_sparse, nstm_sparse, targets, batch_len)
 
-    def _get_buffer_data(self, buffer: ffi.CData, length: int, dtype: np.dtype, device: torch.device, reshape: bool = False) -> torch.Tensor:
-        element_size = np.dtype(dtype).itemsize
-        expected_size = length * element_size
-        data_buffer = self.lib_wrapper.ffi.buffer(buffer, expected_size)
+    def _get_buffer_data(self, buffer, length: int, dtype: np.dtype, device: torch.device, reshape: bool = False) -> torch.Tensor:
+        # Get a buffer view of the _CDataBase object
+        data_buffer = self.lib_wrapper.ffi.buffer(buffer, length * np.dtype(dtype).itemsize)
+        # Convert this buffer view into a numpy array
         data = np.frombuffer(data_buffer, dtype=dtype)
         if reshape:
             data = data.reshape((length, 1))
