@@ -66,7 +66,7 @@ def train(model: torch.nn.Module, optimizer: torch.optim.Optimizer, dataloader: 
         optimizer.zero_grad()
         prediction = model(batch)
 
-        loss = torch.mean((prediction - batch.target) ** 2)
+        loss = torch.mean(torch.abs(prediction - batch.target) ** 2.5)
         loss.backward()
         optimizer.step()
         model.clamp_weights()
