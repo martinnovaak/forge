@@ -2,6 +2,8 @@ import torch
 import struct
 import numpy as np
 
+from model import PerspectiveNetwork
+
 QA = 403
 QB = 64
 QAB = QA * QB
